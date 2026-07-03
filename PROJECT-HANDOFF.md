@@ -13,7 +13,7 @@
 | Repo | 用途 | 狀態 |
 |---|---|---|
 | `fun0963/lcp10_workflow` | **母版 / template repo**（`is_template=true`）。也是我們的工作 repo。 | 有 `protect-main` ruleset；**無** secret |
-| `fun0963/test01` | **測試沙盒**（獨立 repo，非子資料夾，是 lcp10 的完整鏡像） | 有四條 workflow；**無** ruleset；**無** secret |
+| `fun0963/test01` | **測試沙盒**（2026-07-03 用「Use this template」重建，歷史是squash 過的 `Initial commit`，與 lcp10 無共同祖先——同步靠 cherry-pick，不能直接 push 同一份歷史） | 五條 workflow；有 `protect-main` ruleset（2026-07-04 由 API 照 lcp10 複製，id 18488543）；**無** secret |
 
 本機工作目錄已搬家：現在是 `D:/AI_work_claude/lcp10_workflow/`（舊的 `C:/EE/Local_ai_claude/...` 已不存在）。
 其下 `test01/` 子資料夾是本機複本，已加進 `.gitignore`，**不要** commit 進 lcp10。
@@ -48,15 +48,16 @@
   - **補建 `ai-distill.yml`**（原待辦 5）：tag 用純 script，蒸餾用 haiku，產出推 `chore/distill-*` branch 由人開 PR。
   - `ai-arbitration.yml` 加 run summary 提醒：GITHUB_TOKEN push 不重新觸發 scope-check，需 Close/Reopen PR。
   - 本機：`test01/` 的 origin 從誤指 lcp10 改回 `fun0963/test01`；加 `.gitignore`；重裝 `gh` 2.96.0（環境搬家後遺失）。
+  - 已推送：lcp10 `c82f113`（admin bypass 直推 main）、test01 `19d5938`（cherry-pick 到重建後的歷史上）。
+  - test01 建立 `protect-main` ruleset（照 lcp10 設定由 API 複製）→ 原待辦「test01 沒有 ruleset」已清。
 
 **待辦 / 阻塞 ⛔**
 1. **[阻塞] secret 未設**：lcp10 與 test01 都**沒有** `CLAUDE_CODE_OAUTH_TOKEN`。沒它 Claude workflow 一跑就掛。
    設法：test01 → Settings → Secrets and variables → Actions → New repository secret，Name=`CLAUDE_CODE_OAUTH_TOKEN`，值=本機 `claude setup-token` 產出的鑰匙。
    （用訂閱計費，效期一年；CI 用量與互動用量**共用同一份額度**。）
 2. **[阻塞] CodeRabbit 未確認涵蓋 test01**：`github.com/apps/coderabbitai` → Configure → 授權 test01。Reviewer 階段靠它。
-3. **[阻塞] 這台機器 `gh` 未登入、git 無憑證**：環境搬家後憑證全失。跑 `gh auth login`（瀏覽器）＋ `gh auth setup-git`，之後才能 push 第二輪修理的 commit、建 test01 ruleset。
-4. **[待測] 從未實跑過任何 workflow**：YAML 經過兩輪人工檢查但未經 GitHub Actions 實跑驗證。
-5. **[待驗] test01 沒有 ruleset**：要完整測 human-gate（PR + scope-check 綠 + 人工 merge），需在 test01 也建一份 `protect-main`（照 lcp10 的設定）。或第一次先不建、手動 merge，先驗 Claude 階段跑不跑得起來。
+3. **[小事] 這台機器 `gh` 未登入**：git push 憑證其實有效（GCM 存有 token，第二輪修理已成功推上兩個 repo；ruleset 也是借 git 憑證打 API 建的）。`gh` CLI 要用的話跑 `gh auth login`；不登入也不阻塞，`gh secret set` 可改用網頁設。
+4. **[待測] 從未實跑過任何 workflow**：YAML 經過兩輪人工檢查 + actionlint + scope-check 本機沙盒測試（6 案例），但 Claude 階段未經 GitHub Actions 實跑驗證。
 
 ## 4. 建議的第一次冒煙測試順序（在 test01 上）
 
@@ -87,6 +88,6 @@
 
 - 工作目錄：`D:\AI_work_claude\lcp10_workflow\`（舊 `C:\EE\...` 環境已不存在，`C:\iverilog` 也沒了——python 綁架問題應已消失，未驗證）。
 - OS：Windows 11 / PowerShell（主）+ Git Bash。
-- `gh` 2.96.0 已重裝於 `C:\Program Files\GitHub CLI\`（可能要重開 shell 才進 PATH），**尚未登入**——需 `gh auth login` + `gh auth setup-git`。
-- git 無 GitHub 憑證（GCM 空），push 前必先完成上一條。
+- `gh` 2.96.0 已重裝於 `C:\Program Files\GitHub CLI\`（可能要重開 shell 才進 PATH），**尚未登入**（要用 gh CLI 才需要 `gh auth login`）。
+- git 的 GitHub 憑證有效（GCM），push / API 都通——不要被「gh 未登入」誤導。
 - `gh secret set` 若報 "not a git repository"，是因為不在 git 資料夾內跑——加 `-R fun0963/test01` 或用網頁設。
