@@ -1,0 +1,72 @@
+name: AI Orchestrator
+
+# 半自動:你在 Actions 頁面手動觸發(workflow_dispatch)。
+# 讀 project-brief,產出 00-spec / 01-plan / tickets,推到 plan/* branch,你再開 PR 審。
+
+on:
+  workflow_dispatch:
+    inputs:
+      instruction:
+        description: '額外指示(留空=照 project-brief 做開案診斷)'
+        required: false
+        default: ''
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: ai-pipeline
+  cancel-in-progress: false
+
+jobs:
+  orchestrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            你是本專案的 orchestrator,遵守 ai-workflow/AI_COLLAB_DEVELOPMENT_GUIDE.md
+            與 ai-workflow/README.md 的角色分工。
+
+            先讀 ai-workflow/project-brief.md、ai-workflow/03-gates.md 和 repo 結構,
+            【先不要寫 code】。照 ai-workflow/prompts/orchestrator.md 的 Prompt A:
+            1. 重述目標與非目標
+            2. 找出風險與未知數
+            3. 拆成可獨立驗收的窄工單(每張定義 scope / Allowed Files /
+               Forbidden Files / acceptance criteria / required verification)
+            4. 標示哪些需要 human 決策
+
+            把結果寫進 ai-workflow/00-spec.md、01-plan.md、
+            ai-workflow/tickets/T-00X-<title>.md(照 tickets/T-000-template.md 格式)。
+
+            完成後:
+            - git checkout -b plan/<簡短描述>
+            - commit(訊息說明產出了什麼)並 git push -u origin 該 branch
+            - 最後回報 branch 名稱與工單清單
+
+            額外指示:${{ inputs.instruction }}
+          claude_args: |
+            --model opus
+            --max-turns 40
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git:*)"
+
+      - name: 顯示產出的 branch(開 PR 用)
+        if: always()
+        run: |
+          git fetch origin --quiet
+          {
+            echo "## 最近推送的 branches"
+            git for-each-ref --sort=-creatordate --format='- `%(refname:short)`' refs/remotes/origin | head -5
+            echo ""
+            echo "開 PR:https://github.com/${{ github.repository }}/branches"
+          } >> "$GITHUB_STEP_SUMMARY"

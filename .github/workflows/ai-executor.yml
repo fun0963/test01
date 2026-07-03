@@ -1,0 +1,67 @@
+name: AI Executor
+
+# 半自動:你在 Actions 頁面手動觸發,輸入工單編號(如 T-001)。
+# Executor 只執行該張工單,推到 ticket/<id> branch;你開 PR → CodeRabbit 審 → scope-check 驗。
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket:
+        description: '工單編號,例如 T-001'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: ai-pipeline
+  cancel-in-progress: false
+
+jobs:
+  execute:
+    runs-on: ubuntu-latest
+    timeout-minutes: 45
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            你是本專案的 executor,規則見 ai-workflow/prompts/executor.md,必須全文遵守。
+
+            請只執行工單 ${{ inputs.ticket }}:
+            1. 先讀 ai-workflow/tickets/ 下以 ${{ inputs.ticket }} 開頭的工單檔,整份理解。
+            2. git checkout -b ticket/${{ inputs.ticket }}
+            3. 先讀工單列出的相關檔案,理解現有寫法再改。
+            4. 只改工單的 Allowed Files,絕對不碰 Forbidden Files。
+               不做未要求的重構、不引入新框架、不擴散格式化改動。
+               若發現工單本身有問題或做不到,停下來,把原因寫進報告後結束,不要自己改方向。
+            5. 跑工單的 Required Verification(gate 指令見 ai-workflow/03-gates.md);
+               跑不了要在報告中說明原因。
+            6. 把回報寫進 ai-workflow/reports/${{ inputs.ticket }}-report.md,
+               格式照 ai-workflow/reports/T-000-report-template.md:
+               Summary / Files Changed / Verification(附證據)/ Diff Notes /
+               Risks / Scope Deviations。
+            7. commit 並 git push -u origin ticket/${{ inputs.ticket }}
+            8. 最後回報:改了哪些檔、驗證結果、剩餘風險。
+          claude_args: |
+            --model sonnet
+            --max-turns 50
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash"
+
+      - name: 顯示產出的 branch(開 PR 用)
+        if: always()
+        run: |
+          {
+            echo "## Executor 完成:工單 ${{ inputs.ticket }}"
+            echo "開 PR:https://github.com/${{ github.repository }}/compare/main...ticket/${{ inputs.ticket }}?expand=1"
+            echo ""
+            echo "開 PR 後 CodeRabbit 會自動 review,scope-check 會驗證 diff 是否超出工單範圍。"
+          } >> "$GITHUB_STEP_SUMMARY"

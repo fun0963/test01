@@ -1,0 +1,66 @@
+name: AI Arbitration
+
+# 半自動:CodeRabbit review 完成後,你在 Actions 頁面手動觸發,輸入 PR 編號。
+# Orchestrator 仲裁 reviewer findings,寫進 reviews/ 並在 PR 留言,等你終審 merge。
+
+on:
+  workflow_dispatch:
+    inputs:
+      pr:
+        description: 'PR 編號(純數字,如 3)'
+        required: true
+
+permissions:
+  contents: write
+  pull-requests: write
+  issues: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: ai-pipeline
+  cancel-in-progress: false
+
+jobs:
+  arbitrate:
+    runs-on: ubuntu-latest
+    timeout-minutes: 25
+    env:
+      GH_TOKEN: ${{ github.token }}
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          prompt: |
+            你是本專案的 orchestrator,現在執行仲裁
+            (ai-workflow/prompts/orchestrator.md 的 Prompt B)。
+
+            對象是 PR #${{ inputs.pr }}。步驟:
+            1. 用 gh 取得脈絡:
+               - gh pr view ${{ inputs.pr }} --json title,headRefName,body
+               - gh pr diff ${{ inputs.pr }}
+               - gh api repos/${{ github.repository }}/pulls/${{ inputs.pr }}/comments
+                 (CodeRabbit 的 inline findings)
+               - gh pr view ${{ inputs.pr }} --json reviews,comments
+            2. 從 head branch 名稱(ticket/T-XXX)找出工單,讀:
+               ai-workflow/00-spec.md、該工單、ai-workflow/reports/ 對應報告。
+            3. 逐條仲裁每個 finding:有無 evidence / 是否為真 / 是否在本 ticket
+               scope / 是否阻擋 close。決策類型見 ai-workflow/prompts/arbitration.md:
+               Accepted / Accepted-but-Deferred / Rejected / Needs-Human / Needs-Evidence。
+            4. 規則:不盲信 reviewer;假陽性直接 Rejected 並記原因;真問題但超出
+               scope 的記 02-risk-register.md;要修的拆成窄修復工單寫進
+               ai-workflow/tickets/(新編號)。
+            5. 把仲裁表寫進 ai-workflow/reviews/<ticket>-review.md 的
+               Orchestrator Arbitration 區(照 reviews/T-000-review-template.md 格式),
+               checkout 該 PR 的 head branch、commit、push 到同一個 branch。
+            6. 用 gh pr comment ${{ inputs.pr }} --body 貼出仲裁摘要表
+               (Finding / Decision / Reason / Action),結尾寫明:
+               「等待 human owner 終審 merge」或「建議先跑修復工單 T-XXX」。
+          claude_args: |
+            --model opus
+            --max-turns 30
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr:*),Bash(gh api:*)"

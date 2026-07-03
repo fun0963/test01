@@ -1,0 +1,82 @@
+name: scope-check
+
+# Objective Gate(純 script,0 token):驗證 ticket branch 的 diff 只碰工單的 Allowed Files。
+# 工單從 base branch(main)讀取,executor 無法在自己的 branch 上改工單放寬 scope。
+
+on:
+  pull_request:
+    types: [opened, synchronize, reopened]
+
+permissions:
+  contents: read
+
+jobs:
+  scope-check:
+    runs-on: ubuntu-latest
+    timeout-minutes: 5
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: Validate diff against ticket scope
+        shell: bash
+        run: |
+          BR="${GITHUB_HEAD_REF}"
+          BASE="origin/${GITHUB_BASE_REF}"
+          git fetch origin "${GITHUB_BASE_REF}" --quiet
+
+          # 非 ticket branch(plan/*、docs 等)不套用工單 allowlist,交人工 review
+          if [[ ! "$BR" =~ ^ticket/(T-[0-9]+) ]]; then
+            echo "非 ticket branch($BR)— 略過工單 scope 檢查,由人工 review 把關。"
+            exit 0
+          fi
+          TICKET_ID="${BASH_REMATCH[1]}"
+          echo "工單:$TICKET_ID(從 $BASE 讀取工單定義)"
+
+          # 從 base branch 找工單檔(executor 改不到)
+          TICKET_FILE=$(git ls-tree -r --name-only "$BASE" -- ai-workflow/tickets/ \
+            | grep -i "tickets/${TICKET_ID}-" | head -1)
+          if [ -z "$TICKET_FILE" ]; then
+            echo "::error::在 ${GITHUB_BASE_REF} 上找不到 ${TICKET_ID} 的工單檔。工單必須先合進 main 才能執行。"
+            exit 1
+          fi
+          git show "$BASE:$TICKET_FILE" > /tmp/ticket.md
+
+          # 取 "### Allowed Files" 區塊裡反引號包住的路徑(支援 * glob)
+          awk '/^### Allowed Files/{f=1;next} /^###/{f=0} f' /tmp/ticket.md \
+            | grep -oE '`[^`]+`' | tr -d '\`' > /tmp/allowed.txt || true
+
+          # 一律允許 executor 寫自己的報告
+          echo "ai-workflow/reports/${TICKET_ID}-report.md" >> /tmp/allowed.txt
+
+          if [ ! -s /tmp/allowed.txt ]; then
+            echo "::error::工單 $TICKET_FILE 沒有可解析的 Allowed Files 清單。"
+            exit 1
+          fi
+          echo "--- Allowed ---"; cat /tmp/allowed.txt
+
+          git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
+          echo "--- Changed ---"; cat /tmp/changed.txt
+
+          FAIL=0
+          while IFS= read -r f; do
+            [ -z "$f" ] && continue
+            ok=0
+            while IFS= read -r glob; do
+              [ -z "$glob" ] && continue
+              # shellcheck disable=SC2053
+              [[ "$f" == $glob ]] && ok=1
+            done < /tmp/allowed.txt
+            if [ "$ok" -eq 0 ]; then
+              echo "::error file=$f::超出工單 ${TICKET_ID} 的 Allowed Files 範圍"
+              FAIL=1
+            fi
+          done < /tmp/changed.txt
+
+          if [ "$FAIL" -eq 1 ]; then
+            echo "scope-check 失敗:diff 超出工單範圍。請回退超界變更,或由 orchestrator 修訂工單後重跑。"
+          else
+            echo "scope-check 通過:所有變更都在工單範圍內。"
+          fi
+          exit $FAIL
