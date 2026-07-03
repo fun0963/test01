@@ -44,23 +44,26 @@ jobs:
           git show "$BASE:$TICKET_FILE" > /tmp/ticket.md
 
           # 取 "### Allowed Files" 區塊裡反引號包住的路徑(支援 * glob)
-          awk '/^### Allowed Files/{f=1;next} /^###/{f=0} f' /tmp/ticket.md \
-            | grep -oE '`[^`]+`' | tr -d '\`' > /tmp/allowed.txt || true
+          awk '/^### Allowed Files/{f=1;next} /^#/{f=0} f' /tmp/ticket.md \
+            | grep -oE '`[^`]+`' | tr -d '`' > /tmp/allowed.txt || true
 
-          # 一律允許 executor 寫自己的報告
-          echo "ai-workflow/reports/${TICKET_ID}-report.md" >> /tmp/allowed.txt
-
+          # 先驗工單本身的清單是否可解析,再補 pipeline 產物(順序不能反,否則永遠非空)
           if [ ! -s /tmp/allowed.txt ]; then
             echo "::error::工單 $TICKET_FILE 沒有可解析的 Allowed Files 清單。"
             exit 1
           fi
+
+          # 一律允許 pipeline 自身的產物:executor 報告、仲裁 review、風險登記簿
+          echo "ai-workflow/reports/${TICKET_ID}-report.md" >> /tmp/allowed.txt
+          echo "ai-workflow/reviews/${TICKET_ID}-review.md" >> /tmp/allowed.txt
+          echo "ai-workflow/02-risk-register.md" >> /tmp/allowed.txt
           echo "--- Allowed ---"; cat /tmp/allowed.txt
 
-          git diff --name-only "$BASE"...HEAD > /tmp/changed.txt
+          git diff --no-renames --name-status "$BASE"...HEAD > /tmp/changed.txt
           echo "--- Changed ---"; cat /tmp/changed.txt
 
           FAIL=0
-          while IFS= read -r f; do
+          while IFS=$'\t' read -r status f; do
             [ -z "$f" ] && continue
             ok=0
             while IFS= read -r glob; do
@@ -68,6 +71,10 @@ jobs:
               # shellcheck disable=SC2053
               [[ "$f" == $glob ]] && ok=1
             done < /tmp/allowed.txt
+            # 仲裁可在同 branch 新增窄修復工單:「新增(A)」的工單檔放行,「修改既有」工單檔仍擋
+            if [ "$ok" -eq 0 ] && [ "$status" = "A" ] && [[ "$f" == ai-workflow/tickets/T-*.md ]]; then
+              ok=1
+            fi
             if [ "$ok" -eq 0 ]; then
               echo "::error file=$f::超出工單 ${TICKET_ID} 的 Allowed Files 範圍"
               FAIL=1

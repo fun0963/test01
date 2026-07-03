@@ -32,9 +32,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 設定 git 身分(供 Claude 的 git commit 使用)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 明確給 GITHUB_TOKEN:不依賴 Claude GitHub App 的 OIDC 交換(App 未安裝也能跑)
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             你是本專案的 orchestrator,現在執行仲裁
             (ai-workflow/prompts/orchestrator.md 的 Prompt B)。
@@ -64,3 +71,13 @@ jobs:
             --model opus
             --max-turns 30
             --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr:*),Bash(gh api:*)"
+
+      - name: 提醒:scope-check 需要手動重新觸發
+        if: always()
+        run: |
+          {
+            echo "## Arbitration 完成:PR #${{ inputs.pr }}"
+            echo ""
+            echo "若仲裁有 push 新 commit 到 PR branch:GITHUB_TOKEN 的 push **不會**自動重跑 scope-check,"
+            echo "required check 會停在 Expected 狀態。到 PR 頁面 **Close 再 Reopen** 一次即可重新觸發。"
+          } >> "$GITHUB_STEP_SUMMARY"

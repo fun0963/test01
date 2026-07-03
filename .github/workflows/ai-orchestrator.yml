@@ -31,9 +31,16 @@ jobs:
         with:
           fetch-depth: 0
 
+      - name: 設定 git 身分(供 Claude 的 git commit 使用)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
       - uses: anthropics/claude-code-action@v1
         with:
           claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 明確給 GITHUB_TOKEN:不依賴 Claude GitHub App 的 OIDC 交換(App 未安裝也能跑)
+          github_token: ${{ secrets.GITHUB_TOKEN }}
           prompt: |
             你是本專案的 orchestrator,遵守 ai-workflow/AI_COLLAB_DEVELOPMENT_GUIDE.md
             與 ai-workflow/README.md 的角色分工。

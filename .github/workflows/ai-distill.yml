@@ -1,0 +1,96 @@
+name: AI Distill
+
+# 半自動:ticket PR merge 進 main 後,你在 Actions 頁面手動觸發,輸入剛 close 的工單編號。
+# 打 tag 是純 script(0 token);只有蒸餾 memory/handoff/01-plan 呼叫 Claude(haiku,最便宜)。
+# 產出推到 chore/distill-<id> branch,你開 PR 審過再 merge(main 有 ruleset,不直推)。
+
+on:
+  workflow_dispatch:
+    inputs:
+      ticket:
+        description: '剛 merge 的工單編號,例如 T-001'
+        required: true
+
+permissions:
+  contents: write
+  id-token: write
+  actions: read
+
+concurrency:
+  group: ai-pipeline
+  cancel-in-progress: false
+
+jobs:
+  distill:
+    runs-on: ubuntu-latest
+    timeout-minutes: 15
+    steps:
+      - uses: actions/checkout@v4
+        with:
+          fetch-depth: 0
+
+      - name: 驗證工單編號格式
+        env:
+          TICKET: ${{ inputs.ticket }}
+        run: |
+          if [[ ! "$TICKET" =~ ^T-[0-9]+$ ]]; then
+            echo "::error::工單編號格式錯誤:「$TICKET」(應為 T-001 這種格式,大寫 T)"
+            exit 1
+          fi
+
+      - name: 設定 git 身分
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+
+      - name: 打 close tag(純 script,0 token)
+        env:
+          TICKET: ${{ inputs.ticket }}
+        run: |
+          TAG="close/${TICKET}"
+          if git rev-parse -q --verify "refs/tags/${TAG}" >/dev/null; then
+            echo "tag ${TAG} 已存在,略過(可能是重跑)。"
+          else
+            git tag "$TAG" -m "close ${TICKET}"
+            git push origin "refs/tags/${TAG}"
+            echo "已標記 ${TAG} → $(git rev-parse --short HEAD)"
+          fi
+
+      - uses: anthropics/claude-code-action@v1
+        with:
+          claude_code_oauth_token: ${{ secrets.CLAUDE_CODE_OAUTH_TOKEN }}
+          # 明確給 GITHUB_TOKEN:不依賴 Claude GitHub App 的 OIDC 交換(App 未安裝也能跑)
+          github_token: ${{ secrets.GITHUB_TOKEN }}
+          prompt: |
+            你是本專案的記憶蒸餾者,執行 ai-workflow/WORKFLOW.md 第 5 節
+            「每輪 close 的記憶蒸餾」。對象工單:${{ inputs.ticket }}(已 merge 進 main)。
+
+            1. 讀 ai-workflow/reports/${{ inputs.ticket }}-report.md 與
+               ai-workflow/reviews/${{ inputs.ticket }}-review.md
+               (若檔案不存在,照實記錄,只做狀態更新,不要編造內容)。
+            2. 把「以後還需要記得的結論」濃縮成一到兩行,寫進 ai-workflow/memory.md
+               的對應區塊(Stable Facts / Decisions / Known Risks / Do Not Repeat)。
+               不是複製報告,是留結論。
+            3. 更新 ai-workflow/handoff.md:Current Status / Completed /
+               Next Recommended Step。
+            4. 在 ai-workflow/01-plan.md 把工單 ${{ inputs.ticket }} 標為 Done。
+            5. 只准改上述三個檔案,不碰其他任何檔案。
+            6. git checkout -b chore/distill-${{ inputs.ticket }},commit
+               (訊息:distill ${{ inputs.ticket }}),
+               git push -u origin chore/distill-${{ inputs.ticket }}
+            7. 最後回報你寫進 memory.md 的蒸餾結論原文。
+          claude_args: |
+            --model haiku
+            --max-turns 15
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git:*)"
+
+      - name: 顯示產出的 branch(開 PR 用)
+        if: always()
+        run: |
+          {
+            echo "## Distill 完成:工單 ${{ inputs.ticket }}"
+            echo ""
+            echo "開 PR:https://github.com/${{ github.repository }}/compare/main...chore/distill-${{ inputs.ticket }}?expand=1"
+            echo ""
+            echo "看過蒸餾內容沒問題就 merge;tag close/${{ inputs.ticket }} 已直接打在 main 上。"
+          } >> "$GITHUB_STEP_SUMMARY"
