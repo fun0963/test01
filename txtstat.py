@@ -17,7 +17,7 @@ def main():
     try:
         with open(path, "r", encoding="utf-8") as f:
             text = f.read()
-    except OSError as e:
+    except (OSError, UnicodeDecodeError) as e:
         print(f"error: {e}", file=sys.stderr)
         sys.exit(1)
 
