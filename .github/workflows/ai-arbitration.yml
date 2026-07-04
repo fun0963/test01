@@ -67,10 +67,12 @@ jobs:
             6. 用 gh pr comment ${{ inputs.pr }} --body 貼出仲裁摘要表
                (Finding / Decision / Reason / Action),結尾寫明:
                「等待 human owner 終審 merge」或「建議先跑修復工單 T-XXX」。
+          # Bash 全開原因:窄白名單(git/gh pr/gh api)會擋掉複合指令與管線,
+          # 首次實跑 16 次 tool call 被拒、31 turns 爆掉 max-turns。跑順後與 executor 一起收緊。
           claude_args: |
             --model opus
-            --max-turns 30
-            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(gh pr:*),Bash(gh api:*)"
+            --max-turns 40
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash"
 
       - name: 提醒:scope-check 需要手動重新觸發
         if: always()

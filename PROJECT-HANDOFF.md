@@ -74,7 +74,7 @@
 
 ## 5. 已知風險 / 注意事項
 
-- **Executor 的 Bash 權限目前全開**（`--allowedTools "...,Bash"`），因為它要跑任意 gate 指令。跑順後應按專案收緊白名單。
+- **Executor 與 Arbitration 的 Bash 權限目前全開**（`--allowedTools "...,Bash"`）。Executor 因為要跑任意 gate 指令；Arbitration 原本用窄白名單（`git`/`gh pr`/`gh api`），首次實跑（2026-07-04，test01 PR #3）因複合指令與管線被拒 16 次、31 turns 爆掉 `--max-turns 30` 而失敗，故放寬為全開並把 max-turns 提到 40。跑順後兩者一起收緊。
 - **Arbitration 依賴「CodeRabbit 已經 review 過該 PR」**：若 CodeRabbit 還沒貼 findings 就觸發仲裁，Claude 會拿到空的 review。順序上要等 CodeRabbit 完成再觸發。
 - **仲裁 push 後 required check 會停在 Expected**：GITHUB_TOKEN 的 push 不觸發 pull_request workflow。解法＝PR 頁面 Close 再 Reopen（或 admin bypass merge）。已寫進 `.github/README.md` 已知眉角。
 - **GITHUB_TOKEN 遞迴限制**：目前是半自動（人手動觸發每階段），所以還沒踩到「bot 動作不觸發下游 workflow」的坑。若之後要**全自動串接**，需改用 GitHub App token 或 PAT，並補回防迴圈 guard（`if github.actor != bot`、label 狀態機、queue 模式的 concurrency）。研究結論詳見對話歷史。
