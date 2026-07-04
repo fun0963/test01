@@ -4,9 +4,9 @@
 
 ## Stable Facts
 - txtstat.py 單檔 CLI 實作完成，compute_stats(text) 基於 splitlines/split/len 實現，lines/words/chars 語義已於 SPEC D1-D4 拍板
-- 讀檔採 open(path, "r", encoding="utf-8")，OSError 走 error: 路徑；UnicodeDecodeError 需額外 catch（T-003 修復）
+- 讀檔採 open(path, "r", encoding="utf-8")，OSError 走 error: 路徑；UnicodeDecodeError 已由 T-003 併入 except tuple，非 UTF-8 檔走標準 error: 格式、無 traceback
 - Smoke gate（words=4）符合預期；測試框架已實作（PR #6 test_txtstat.py：三案正常/空/不存在，Unit gate 綠燈）
-- T-002（unittest 框架）已 merge 進 main；Unit gate 驗收完成；T-004（test_empty_file stderr 斷言一致性）開為品質補強不阻擋
+- T-002（unittest 框架）已 merge 進 main；Unit gate 驗收完成；T-003（UnicodeDecodeError 修復）已 merge 進 main；T-004（test_empty_file stderr 斷言一致性）開為品質補強不阻擋
 
 ## Architecture Notes
 - <系統結構與重要限制>
@@ -19,7 +19,6 @@
 - D2-D4（chars/lines 邊界語意、錯誤訊息格式）：已依 Orchestrator 預設實作，human owner 於 T-001 merge 時確認
 
 ## Known Risks
-- RK-004（P3）：UnicodeDecodeError 繞過 error: 格式，已開 T-003 窄修復，建議 merge 前先跑
 - RK-002/RK-003：邊界語意與錯誤訊息格式，待 human 終審驗收
 
 ## Do Not Repeat
