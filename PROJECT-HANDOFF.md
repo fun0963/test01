@@ -65,12 +65,20 @@
   - **終審 merge PR #3 → Distill（haiku，約 1.5 分）**：tag `close/T-001` 打好、蒸餾內容事實正確 → distill PR merge。
   - 全程 0 手動瀏覽器操作（除 secret/CodeRabbit 事前設定），每階段由 API 觸發。
 
+- **第五輪（2026-07-05，T-003 + T-002 兩輪跑完，沙盒專案收官 ✅）**：
+  - **T-003 輪**：Executor 一行修復 → PR #5 → CodeRabbit 0 finding → 仲裁**獨立實跑**非 UTF-8 案例驗證修復正確，但依 not-run 規則開 **O-001 擋 close**（Unit gate 必須項而 `tests/` 不存在、本票又禁動 tests/）→ 交 human 擇一。
+  - **T-002 輪**（採仲裁建議方案 a，先補測試）：Executor 建 `tests/test_txtstat.py`（3 案例）→ PR #6 → CodeRabbit 2 個 trivial nit → 仲裁 R-001 排版 nit Rejected、R-002（空檔未斷言 stderr）Accepted 開追蹤票 **T-004**、branch 實測 Unit gate 綠、不擋 close → merge → Distill（`close/T-002`）。
+  - **回頭關 T-003**：本機把 main 併入 `ticket/T-003`、實跑四項 gate 全綠（Unit 3 tests OK、Static、Smoke、非 UTF-8 邊界無 traceback）→ PR #5 留言記錄 O-001 決策與證據 → merge → Distill（`close/T-003`）。
+  - 沙盒最終狀態：`main` + `close/T-001`~`close/T-003` 三個 tag，無殘留 branch；僅剩 T-004（trivial 追蹤票）未跑。
+  - **實測差異紀錄**:本機 PAT push 到 PR branch 會自動觸發 scope-check(pull_request synchronize);CI 內 GITHUB_TOKEN push 不會,需 Close/Reopen。
+  - 環境更新:這台機器 python3 = 3.13.9 可用(舊 handoff「python 被 gtkwave 綁架」問題不存在於新環境)。
+
 **待辦 / 阻塞 ⛔**
-1. **[待辦] test01 沙盒還有兩張票可跑**：T-002（補 unittest）、T-003（except 併入 UnicodeDecodeError，一行修復）。跑法照每輪循環（Executor → PR → 仲裁 → merge → Distill）。跑完就是「2–3 張工單」的額度外推資料點。
-2. **[待辦] 用 `/usage` 記錄本輪額度消耗**：本輪已知 arbitration 失敗那次燒掉約 $2.35 等值 opus 用量（log 有 total_cost_usd），其餘各 run 未逐一記錄——在互動 session 看 `/usage` 外推週消耗，決定 Pro 夠不夠。
-3. **[待辦] 收緊 Executor / Arbitration 的 Bash 白名單**：現在兩者全開。等 T-002/T-003 也跑順、確認常用指令集合後再收。
+1. **[可選] T-004 追蹤票**：`test_empty_file` 補 stderr 斷言（trivial，一行測試改動）。可當下一次練手，或留著。
+2. **[待辦] 用 `/usage` 記錄額度消耗**：現在有三張工單 + 一次失敗重跑的完整樣本（已知 arbitration 失敗那次 ≈ $2.35 等值 opus）。在互動 session 看 `/usage` 外推週消耗，決定 Pro 夠不夠。
+3. **[待辦] 收緊 Executor / Arbitration 的 Bash 白名單**：現在兩者全開。三輪已跑順，可從 run log 整理常用指令集合後收緊。
 4. **[待辦] lcp10 的 secret 未設**：目前只設了 test01。要在母版 lcp10 直接跑 workflow 時才需要：`gh secret set CLAUDE_CODE_OAUTH_TOKEN -R fun0963/lcp10_workflow`。
-5. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題（本輪已踩過一次類似坑）。
+5. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題。
 
 ## 4. 建議的第一次冒煙測試順序（在 test01 上）
 
