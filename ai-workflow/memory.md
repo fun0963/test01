@@ -5,7 +5,8 @@
 ## Stable Facts
 - txtstat.py 單檔 CLI 實作完成，compute_stats(text) 基於 splitlines/split/len 實現，lines/words/chars 語義已於 SPEC D1-D4 拍板
 - 讀檔採 open(path, "r", encoding="utf-8")，OSError 走 error: 路徑；UnicodeDecodeError 需額外 catch（T-003 修復）
-- Smoke gate（words=4）符合預期；測試框架留 T-002 實作
+- Smoke gate（words=4）符合預期；測試框架已實作（PR #6 test_txtstat.py：三案正常/空/不存在，Unit gate 綠燈）
+- T-002（unittest 框架）已 merge 進 main；Unit gate 驗收完成；T-004（test_empty_file stderr 斷言一致性）開為品質補強不阻擋
 
 ## Architecture Notes
 - <系統結構與重要限制>
