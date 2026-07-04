@@ -46,9 +46,10 @@
 
 ## Open Decisions（需 human owner 拍板）
 - **D1（阻擋 smoke）**：`03-gates.md` Smoke 的輸入 `printf 'hello world\nsecond line\n'` 實含 **4** 個單字（hello, world, second, line），但期望輸出寫 `words=3`，兩者矛盾。需擇一：(a) 把 gate 期望改成 `words=4`；(b) 把 smoke 輸入改成真正 3 個字的檔。`03-gates.md` 是 gate 權威來源，Orchestrator 不逕改，交 human 決定。
-- **D2**：`chars` 是否計入尾端換行、以及用 code point 還是 byte。預設：含換行、用 code point。
-- **D3**：`lines` 對「最後一行無換行」的檔案採 `splitlines()`（幾行文字）或 `wc -l`（數 `\n`）。預設：`splitlines()`。
-- **D4**：`error:` 後的原因字串格式（用 OS error 原文 vs 自訂訊息）。預設：帶上 OS 例外訊息，格式 `error: <exception message>`。
+  → **已拍板（2026-07-04，human owner）：採 (a)。gate 期望改為 `lines=2 words=4 chars=24`（以 `wc` 實測），`03-gates.md` 與 `project-brief.md` 已同步更新。原 `words=3` 是 brief 撰寫者的算術錯誤。**
+- **D2**：`chars` 是否計入尾端換行、以及用 code point 還是 byte。預設：含換行、用 code point。→ **已拍板：採預設。**
+- **D3**：`lines` 對「最後一行無換行」的檔案採 `splitlines()`（幾行文字）或 `wc -l`（數 `\n`）。預設：`splitlines()`。→ **已拍板：採預設。**
+- **D4**：`error:` 後的原因字串格式（用 OS error 原文 vs 自訂訊息）。預設：帶上 OS 例外訊息，格式 `error: <exception message>`。→ **已拍板：採預設。**
 
 ## Release / Merge Gate
 > 詳細 gate 指令與 not-run 規則見 `03-gates.md`。

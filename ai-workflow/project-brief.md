@@ -22,5 +22,5 @@
 
 ## 驗收
 - `python3 -m unittest discover -s tests` 全綠。
-- smoke：對一個兩行測試檔跑 `python3 txtstat.py`，輸出格式正確（`lines=2 words=3 chars=N`）。
+- smoke：對一個兩行測試檔跑 `python3 txtstat.py`，輸出格式正確（`lines=2 words=4 chars=N`）。
 - 人工看過：錯誤訊息與輸出格式合理。

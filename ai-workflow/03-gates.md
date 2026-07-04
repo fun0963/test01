@@ -10,7 +10,7 @@
 | Static | `python3 -m py_compile txtstat.py` | 是 | 每張工單 |
 | Unit | `python3 -m unittest discover -s tests -v` | 是 | 每張工單 |
 | Integration | 不適用（單檔 CLI，無外部系統） | 否 | — |
-| Smoke / E2E | `printf 'hello world\nsecond line\n' > /tmp/smoke.txt && python3 txtstat.py /tmp/smoke.txt`（預期輸出 `lines=2 words=3 chars=N`） | 是 | close 前 |
+| Smoke / E2E | `printf 'hello world\nsecond line\n' > /tmp/smoke.txt && python3 txtstat.py /tmp/smoke.txt`（預期輸出 `lines=2 words=4 chars=24`） | 是 | close 前 |
 | Manual Product Check | human owner 看輸出與錯誤訊息格式 | 是 | close 前 |
 
 ## 環境 / 前置
