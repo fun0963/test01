@@ -7,20 +7,17 @@
 
 | Gate | 指令 | 必須 | 何時跑 |
 | --- | --- | --- | --- |
-(上一列換成新專案真實指令lint/test/smoke 怎麼跑)
-| Static | `<lint + typecheck 指令，例如 npm run lint && npm run typecheck>` | 是 | 每張工單 |
-| Unit | `<例如 npm test / pytest>` | 是 | 每張工單 |
-| Integration | `<例如 npm run test:integration>` | 視工單 | 碰 API / DB 時 |
-| Smoke / E2E | `<例如 curl ... / 啟動腳本 / 真實檔案驗證>` | 是 | close 前 |
-| Manual Product Check | human owner 看 UI / 行為 | 是 | close 前 |
-
-> 開案時由 Orchestrator + Human 一起把 `<...>` 換成本專案真實指令。
+| Static | `python3 -m py_compile txtstat.py` | 是 | 每張工單 |
+| Unit | `python3 -m unittest discover -s tests -v` | 是 | 每張工單 |
+| Integration | 不適用（單檔 CLI，無外部系統） | 否 | — |
+| Smoke / E2E | `printf 'hello world\nsecond line\n' > /tmp/smoke.txt && python3 txtstat.py /tmp/smoke.txt`（預期輸出 `lines=2 words=3 chars=N`） | 是 | close 前 |
+| Manual Product Check | human owner 看輸出與錯誤訊息格式 | 是 | close 前 |
 
 ## 環境 / 前置
 
-- 怎麼起服務：`<指令>`
-- 怎麼備測試資料 / DB：`<步驟>`
-- 需要的環境變數 / 憑證：`<說明>`
+- 怎麼起服務：不需要，純 CLI，`python3` 直接執行。
+- 怎麼備測試資料 / DB：測試內用 `tempfile` 自行產生，不留檔案。
+- 需要的環境變數 / 憑證：無。
 
 ## Release / Merge Gate（總關卡）
 
@@ -34,7 +31,6 @@
 
 只有以下明確原因可接受某個 gate not run,且必須寫在 report 的 Verification 欄:
 
-- `<例如：此工單未觸及該模組，integration 不適用>`
-- `<例如：需要正式環境憑證，本地無法跑，已於 handoff 標記待 CI 驗>`
+- 此工單未觸及 `txtstat.py` 或 `tests/`（例如純文件工單），Static / Unit / Smoke 不適用。
 
 除此之外一律視為**未通過**,不得 close。不接受「應該可以」「看起來沒問題」「只是小改所以不用驗」。
