@@ -3,7 +3,9 @@
 > 長任務不能靠模型上下文記憶。每輪結束把穩定事實寫進來，讓下一輪不必重新理解。
 
 ## Stable Facts
-- <已確認不太會變的事實>
+- txtstat.py 單檔 CLI 實作完成，compute_stats(text) 基於 splitlines/split/len 實現，lines/words/chars 語義已於 SPEC D1-D4 拍板
+- 讀檔採 open(path, "r", encoding="utf-8")，OSError 走 error: 路徑；UnicodeDecodeError 需額外 catch（T-003 修復）
+- Smoke gate（words=4）符合預期；測試框架留 T-002 實作
 
 ## Architecture Notes
 - <系統結構與重要限制>
@@ -12,10 +14,13 @@
 - <命名、測試、錯誤處理、資料格式約定>
 
 ## Decisions
-- <已決策事項與原因，重大者另建 decisions/ADR-XXX>
+- D1（smoke words=4）：已於 SPEC 與 03-gates.md 拍板，遺留 smoke-test 在 gate 中一並驗收
+- D2-D4（chars/lines 邊界語意、錯誤訊息格式）：已依 Orchestrator 預設實作，human owner 於 T-001 merge 時確認
 
 ## Known Risks
-- <未解風險，明細見 02-risk-register.md>
+- RK-004（P3）：UnicodeDecodeError 繞過 error: 格式，已開 T-003 窄修復，建議 merge 前先跑
+- RK-002/RK-003：邊界語意與錯誤訊息格式，待 human 終審驗收
 
 ## Do Not Repeat
-- <已證明錯誤的方向或假 finding>
+- Path traversal（R-002）：CLI 輸入來自 sys.argv[1]（使用者自行提供），無信任邊界；CWE-22 不適用於本機工具
+- 勿包裝 OSError 訊息：SPEC D4 明確要求帶上 OS 例外訊息，直接傳遞符合預期
