@@ -6,7 +6,7 @@
 
 ## 0. 一句話總結
 
-我們做了一套**多模型 AI 協作開發模板**（`ai-workflow/`），並在 GitHub 上接了一條**半自動 pipeline**（`.github/workflows/`），讓 Orchestrator / Executor / Reviewer 三角色能經由手動觸發的 workflow 分階段執行，人類在 merge 前終審。程式碼與文件都已完成並推上 GitHub；**尚未實跑驗證過任何一條 workflow**。
+我們做了一套**多模型 AI 協作開發模板**（`ai-workflow/`），並在 GitHub 上接了一條**半自動 pipeline**（`.github/workflows/`），讓 Orchestrator / Executor / Reviewer 三角色能經由手動觸發的 workflow 分階段執行，人類在 merge 前終審。**2026-07-04 已在 test01 沙盒用最小專案完整跑通一輪**（Orchestrator → plan PR → Executor → CodeRabbit + scope-check → 仲裁 → 終審 merge → Distill + tag），期間發現並修復一個紅燈（arbitration 白名單過窄）。
 
 ## 1. 兩個 repo 的角色
 
@@ -56,10 +56,21 @@
   - **金絲雀 PR（test01 #1）驗證通過後關閉**：scope-check 首次在 Actions 實跑 → **綠**（非 ticket branch 略過路徑正確）；**CodeRabbit 有實際 review** → 涵蓋 test01 確認（原待辦 2 完成）。
   - 文件補「開案:人類與 AI 的分工」checklist（`ai-workflow/WORKFLOW.md` §1，USAGE 與 .github/README 有指路）。
 
+- **第四輪（2026-07-04，冒煙測試完整跑通 ✅）**：在 test01 用最小專案（txtstat.py CLI）跑完整輪：
+  - **Orchestrator（opus，約 4 分）**：拆出 T-001/T-002、產 spec/plan；還抓到 brief 撰寫者在 gate 裡的算術錯誤（words=3 應為 4），正確開 Open Decision 不硬湊 → plan PR #2 拍板 D1–D4 後 merge。
+  - **Executor（sonnet，約 2.5 分）**：T-001 實作乾淨、diff 全在 Allowed Files 內、報告附真實證據與正當的 Unit gate Not-Run 理由 → PR #3。
+  - **CodeRabbit + scope-check**：ticket branch 真白名單路徑綠燈。
+  - **Arbitration（opus）**：🔴 首跑爆 `max-turns`（窄白名單致 16 次工具拒絕）→ 放寬 Bash + max-turns 40 後重跑 ✅。仲裁品質好：R-001（UnicodeDecodeError 未接）Accepted 並開窄修復票 T-003、R-002（路徑遍歷）正確判假陽性 Rejected。
+  - **仲裁後 required check 卡 Expected** → 照文件 Close/Reopen 重觸發，scope-check 對仲裁產物（reviews/風險登記簿/新增 T-003）綠燈——第二輪修的白名單在實戰中驗證。
+  - **終審 merge PR #3 → Distill（haiku，約 1.5 分）**：tag `close/T-001` 打好、蒸餾內容事實正確 → distill PR merge。
+  - 全程 0 手動瀏覽器操作（除 secret/CodeRabbit 事前設定），每階段由 API 觸發。
+
 **待辦 / 阻塞 ⛔**
-1. **[待測] Claude 階段未實跑**：scope-check 已實測綠；AI Orchestrator / Executor / Arbitration / Distill 四條仍未實跑過。下一步就是照 §4 冒煙測試（secret、CodeRabbit、ruleset 都已就緒）。
-2. **[待辦] lcp10 的 secret 未設**：目前只設了 test01。要在母版 lcp10 直接跑 workflow 時才需要：`gh secret set CLAUDE_CODE_OAUTH_TOKEN -R fun0963/lcp10_workflow`。
-3. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題（本輪已踩過一次類似坑）。
+1. **[待辦] test01 沙盒還有兩張票可跑**：T-002（補 unittest）、T-003（except 併入 UnicodeDecodeError，一行修復）。跑法照每輪循環（Executor → PR → 仲裁 → merge → Distill）。跑完就是「2–3 張工單」的額度外推資料點。
+2. **[待辦] 用 `/usage` 記錄本輪額度消耗**：本輪已知 arbitration 失敗那次燒掉約 $2.35 等值 opus 用量（log 有 total_cost_usd），其餘各 run 未逐一記錄——在互動 session 看 `/usage` 外推週消耗，決定 Pro 夠不夠。
+3. **[待辦] 收緊 Executor / Arbitration 的 Bash 白名單**：現在兩者全開。等 T-002/T-003 也跑順、確認常用指令集合後再收。
+4. **[待辦] lcp10 的 secret 未設**：目前只設了 test01。要在母版 lcp10 直接跑 workflow 時才需要：`gh secret set CLAUDE_CODE_OAUTH_TOKEN -R fun0963/lcp10_workflow`。
+5. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題（本輪已踩過一次類似坑）。
 
 ## 4. 建議的第一次冒煙測試順序（在 test01 上）
 
