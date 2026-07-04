@@ -30,14 +30,25 @@
 
 ---
 
-## 1. 開案(一次性)
+## 1. 開案(一次性):人類與 AI 的分工
 
-```bash
-cp -r /path/to/ai-workflow ./ai-workflow   # 複製母版到新專案根目錄
-```
+> 一句話原則:**要瀏覽器 OAuth、花錢授權、產品判斷、接受風險的 → 人類;
+> 可用檔案與 API 完成的機械步驟 → AI 代辦;LLM 額度只花在固定的呼叫點。**
 
-1. 填 `ai-workflow/project-brief.md`(背景 / 目標 / 非目標 / 限制 / 驗收)。
-2. 和 Orchestrator 一起把 `ai-workflow/03-gates.md` 的 gate 指令換成本專案真實指令。
+| # | 事項 | 誰 | 說明 |
+|---|---|---|---|
+| 1 | 建新 repo:GitHub 上對母版按 **Use this template**(或 `cp -r ai-workflow` 進既有專案) | 人 | 產生的 repo 歷史是 squash 過的 `Initial commit` |
+| 2 | 本機 `claude setup-token` → 設 repo secret `CLAUDE_CODE_OAUTH_TOKEN` | **人** | 瀏覽器 OAuth,AI 無法代辦;CI 與互動**共用**訂閱額度 |
+| 3 | CodeRabbit App 授權涵蓋新 repo(`github.com/apps/coderabbitai` → Configure) | **人** | 網頁授權,AI 無法代辦 |
+| 4 | 建 `protect-main` ruleset(必須走 PR + `scope-check` required + 禁 force-push,admin 可 bypass) | 人或 AI | AI 可用 API 照母版複製(PAT 需 Administration RW) |
+| 5 | 開**金絲雀 PR**:實測 scope-check 會跑綠、CodeRabbit 會出現 review | AI | 0 Claude 額度;驗完關 PR、刪 branch |
+| 6 | 填 `ai-workflow/project-brief.md`(背景/目標/非目標/限制/驗收) | **人** | 產品意圖只有人知道;這是整條 pipeline 的輸入 |
+| 7 | 把 `ai-workflow/03-gates.md` 換成本專案真實 gate 指令 | AI 起草、人拍板 | Orchestrator 提議 lint/test/smoke,人確認每條真的能跑 |
+| 8 | 首跑 **AI Orchestrator**:診斷 + 拆工單(產 00-spec/01-plan/tickets) | AI(opus) | 跑前後用 `/usage` 記額度,建立用量基準 |
+| 9 | 審 plan PR(spec/plan/工單)後 merge | **人** | 工單的 Allowed Files 就是日後 scope-check 的執法依據,務必看過 |
+
+若**只用本機互動模式**(不接 GitHub pipeline):只需 1、6、7,見 [`USAGE.md`](USAGE.md) 的「開案三步」。
+進入每輪循環後的分工見 [`.github/README.md`](../.github/README.md) 的「每輪循環」表——人只按幾次按鈕加終審,其餘自動。
 
 ---
 

@@ -13,6 +13,9 @@
 > 不需要安裝 Claude GitHub App:workflow 已明確傳 `github_token`(GITHUB_TOKEN),
 > 不走 App 的 OIDC 交換。
 
+完整的開案「人類 vs AI」分工 checklist(含金絲雀 PR 驗證、誰能代辦什麼)見
+[`../ai-workflow/WORKFLOW.md`](../ai-workflow/WORKFLOW.md) §1。
+
 ## 每輪循環(半自動:每階段你按一次)
 
 | 步驟 | 動作 | 誰跑 / 模型 |

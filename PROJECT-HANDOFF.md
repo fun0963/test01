@@ -50,18 +50,20 @@
   - 本機：`test01/` 的 origin 從誤指 lcp10 改回 `fun0963/test01`；加 `.gitignore`；重裝 `gh` 2.96.0（環境搬家後遺失）。
   - 已推送：lcp10 `c82f113`（admin bypass 直推 main）、test01 `19d5938`（cherry-pick 到重建後的歷史上）。
   - test01 建立 `protect-main` ruleset（照 lcp10 設定由 API 複製）→ 原待辦「test01 沒有 ruleset」已清。
+- **第三輪（2026-07-04，同日稍晚）**：
+  - 使用者把 gh 登入換成 fine-grained PAT 並補齊權限（過程中誤刪過 Contents，已修）。目前 PAT 有：Contents / Workflows / Secrets / Administration / Actions / Pull requests（RW）。同一顆 PAT 同時是 GCM 的 git 憑證。
+  - **test01 的 `CLAUDE_CODE_OAUTH_TOKEN` secret 已設好**（原待辦 1 的 test01 部分完成）。
+  - **金絲雀 PR（test01 #1）驗證通過後關閉**：scope-check 首次在 Actions 實跑 → **綠**（非 ticket branch 略過路徑正確）；**CodeRabbit 有實際 review** → 涵蓋 test01 確認（原待辦 2 完成）。
+  - 文件補「開案:人類與 AI 的分工」checklist（`ai-workflow/WORKFLOW.md` §1，USAGE 與 .github/README 有指路）。
 
 **待辦 / 阻塞 ⛔**
-1. **[阻塞] secret 未設**：lcp10 與 test01 都**沒有** `CLAUDE_CODE_OAUTH_TOKEN`。沒它 Claude workflow 一跑就掛。
-   設法：test01 → Settings → Secrets and variables → Actions → New repository secret，Name=`CLAUDE_CODE_OAUTH_TOKEN`，值=本機 `claude setup-token` 產出的鑰匙。
-   （用訂閱計費，效期一年；CI 用量與互動用量**共用同一份額度**。）
-2. **[阻塞] CodeRabbit 未確認涵蓋 test01**：`github.com/apps/coderabbitai` → Configure → 授權 test01。Reviewer 階段靠它。
-3. **[小事] 這台機器 `gh` 未登入**：git push 憑證其實有效（GCM 存有 token，第二輪修理已成功推上兩個 repo；ruleset 也是借 git 憑證打 API 建的）。`gh` CLI 要用的話跑 `gh auth login`；不登入也不阻塞，`gh secret set` 可改用網頁設。
-4. **[待測] 從未實跑過任何 workflow**：YAML 經過兩輪人工檢查 + actionlint + scope-check 本機沙盒測試（6 案例），但 Claude 階段未經 GitHub Actions 實跑驗證。
+1. **[待測] Claude 階段未實跑**：scope-check 已實測綠；AI Orchestrator / Executor / Arbitration / Distill 四條仍未實跑過。下一步就是照 §4 冒煙測試（secret、CodeRabbit、ruleset 都已就緒）。
+2. **[待辦] lcp10 的 secret 未設**：目前只設了 test01。要在母版 lcp10 直接跑 workflow 時才需要：`gh secret set CLAUDE_CODE_OAUTH_TOKEN -R fun0963/lcp10_workflow`。
+3. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題（本輪已踩過一次類似坑）。
 
 ## 4. 建議的第一次冒煙測試順序（在 test01 上）
 
-1. 設好 secret（待辦 1）+ 確認 CodeRabbit（待辦 2）。
+1. ~~設好 secret + 確認 CodeRabbit~~ ✅ 已完成（2026-07-04，金絲雀 PR 驗證過）。
 2. 在 test01 填一個很小的 `ai-workflow/project-brief.md`（可直接推 main）。
 3. Actions → **AI Orchestrator** → Run workflow。看它產出的 `plan/*` branch 品質；**跑前後用 `claude` 的 `/usage` 記錄額度消耗**（這是第一筆真實用量數據）。
 4. 對 `plan/*` 開 PR、merge（把工單併進 main，scope-check 才讀得到）。

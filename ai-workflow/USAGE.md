@@ -23,6 +23,8 @@ cp -r /path/to/ai-workflow ./ai-workflow
 2. 填 `ai-workflow/project-brief.md`（背景 / 目標 / 非目標 / 限制 / 驗收），並把 `03-gates.md` 換成本專案真實 gate 指令。
 3. 把 brief 貼給 Orchestrator，用 `prompts/orchestrator.md` 的 Prompt A：先診斷、拆工單，產出 `00-spec.md` 與 `01-plan.md`。**先不寫 code。**
 
+> 若要接 GitHub 半自動 pipeline，完整的開案「人類 vs AI」分工 checklist（secret、CodeRabbit、ruleset、金絲雀 PR）見 [`WORKFLOW.md`](WORKFLOW.md) §1。
+
 ## 三、每張工單的循環
 
 ```text
