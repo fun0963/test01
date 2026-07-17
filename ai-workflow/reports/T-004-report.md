@@ -7,6 +7,7 @@
 - `tests/test_txtstat.py`: `test_empty_file` 既有斷言後新增一行 `self.assertEqual(result.stderr, "")`。
 
 ## Verification
+
 | Check | Result | Evidence |
 | --- | --- | --- |
 | `python3 -m py_compile txtstat.py` | Pass | 無輸出，exit 0（`PY_COMPILE_OK` echo 確認） |
