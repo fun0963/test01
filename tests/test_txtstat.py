@@ -47,6 +47,7 @@ class TestTxtstatCLI(unittest.TestCase):
 
         self.assertEqual(result.returncode, 0)
         self.assertEqual(result.stdout.strip(), "lines=0 words=0 chars=0")
+        self.assertEqual(result.stderr, "")
 
     def test_nonexistent_file(self):
         with tempfile.TemporaryDirectory() as tmpdir:
