@@ -6,7 +6,7 @@
 - txtstat.py 單檔 CLI 實作完成，compute_stats(text) 基於 splitlines/split/len 實現，lines/words/chars 語義已於 SPEC D1-D4 拍板
 - 讀檔採 open(path, "r", encoding="utf-8")，OSError 走 error: 路徑；UnicodeDecodeError 已由 T-003 併入 except tuple，非 UTF-8 檔走標準 error: 格式、無 traceback
 - Smoke gate（words=4）符合預期；測試框架已實作（PR #6 test_txtstat.py：三案正常/空/不存在，Unit gate 綠燈）
-- T-002（unittest 框架）已 merge 進 main；Unit gate 驗收完成；T-003（UnicodeDecodeError 修復）已 merge 進 main；T-004（test_empty_file stderr 斷言一致性）開為品質補強不阻擋
+- T-002（unittest 框架）已 merge 進 main；Unit gate 驗收完成；T-003（UnicodeDecodeError 修復）已 merge 進 main；T-004（test_empty_file stderr 斷言一致性，PR #9）已 merge 進 main——測試補強純一行斷言、Orchestrator 獨立驗證三 gate 全綠、無產品碼變動無回歸
 
 ## Architecture Notes
 - <系統結構與重要限制>
