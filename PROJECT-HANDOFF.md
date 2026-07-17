@@ -75,10 +75,35 @@
 
 **待辦 / 阻塞 ⛔**
 1. **[可選] T-004 追蹤票**：`test_empty_file` 補 stderr 斷言（trivial，一行測試改動）。可當下一次練手，或留著。
-2. **[待辦] 用 `/usage` 記錄額度消耗**：現在有三張工單 + 一次失敗重跑的完整樣本（已知 arbitration 失敗那次 ≈ $2.35 等值 opus）。在互動 session 看 `/usage` 外推週消耗，決定 Pro 夠不夠。
+2. **[半完成] 額度數據已從 run log 彙總**（見下方「實測額度數據」，API 等值 USD）。剩下的是訂閱側：在互動 session 看 `/usage`，把「這三輪跑掉的週上限百分比」對照下表換算，外推 Pro 夠不夠。
 3. **[待辦] 收緊 Executor / Arbitration 的 Bash 白名單**：現在兩者全開。三輪已跑順，可從 run log 整理常用指令集合後收緊。
 4. **[待辦] lcp10 的 secret 未設**：目前只設了 test01。要在母版 lcp10 直接跑 workflow 時才需要：`gh secret set CLAUDE_CODE_OAUTH_TOKEN -R fun0963/lcp10_workflow`。
 5. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題。
+
+## 3.5 實測額度數據（2026-07-04~05，test01 三張工單，來源：run log 的 `total_cost_usd`）
+
+> USD 為 **API 等值**；訂閱制實際扣的是額度（5hr 窗 + 週上限），數字當相對比例用，對照 `/usage` 換算。
+
+| Run | 模型 | turns | Claude 執行時間 | API 等值 |
+|---|---|---|---|---|
+| Orchestrator 開案拆單 | opus | 18 | 3.2 分 | $0.88 |
+| Executor T-001 | sonnet | 20 | 1.7 分 | $0.43 |
+| **Arbitration T-001（失敗，事故）** | opus | 31 | 8.0 分 | **$2.35** |
+| Arbitration T-001（重跑） | opus | 22 | 3.4 分 | $0.93 |
+| Distill T-001 | haiku | 19 | 0.8 分 | $0.07 |
+| Executor T-003 | sonnet | 22 | 1.2 分 | $0.40 |
+| Arbitration T-003 | opus | 20 | 3.3 分 | $0.81 |
+| Executor T-002 | sonnet | 22 | 1.5 分 | $0.35 |
+| Arbitration T-002 | opus | 19 | 2.8 分 | $0.77 |
+| Distill T-002 | haiku | 14 | 0.7 分 | $0.08 |
+| Distill T-003 | haiku | 16 | 0.7 分 | $0.08 |
+| **總計（11 runs）** | | | ≈27 分 | **≈$7.15** |
+
+**結論**：
+- **穩態一輪（Executor+Arbitration+Distill）≈ $1.2–1.3**；開案拆單一次性 $0.88。
+- **仲裁（opus）是成本大頭**，佔穩態一輪的 60%+；Distill（haiku）近乎免費（$0.07–0.08）。
+- **事故很貴**：permission-denial 空轉那次 $2.35，是正常仲裁的 2.5–3 倍——`--max-turns` 護欄擋住了更糟的，但白名單設錯的代價真實存在。
+- 粗估：**每週跑 10 輪工單 ≈ $13 等值 + 開案**；對照 `/usage` 的窗口/週上限百分比即可判斷 Pro 夠不夠。
 
 ## 4. 建議的第一次冒煙測試順序（在 test01 上）
 
