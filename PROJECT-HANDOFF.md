@@ -73,12 +73,16 @@
   - **實測差異紀錄**:本機 PAT push 到 PR branch 會自動觸發 scope-check(pull_request synchronize);CI 內 GITHUB_TOKEN push 不會,需 Close/Reopen。
   - 環境更新:這台機器 python3 = 3.13.9 可用(舊 handoff「python 被 gtkwave 綁架」問題不存在於新環境)。
 
+- **第六輪（2026-07-17，T-004 收官 + 白名單收緊實彈驗證 ✅）**：
+  - **先收緊再驗證**：Executor / Arbitration 的 Bash 從全開改為「通用底座（git/gh + coreutils）+ 本專案 gate 指令段（python3/printf）」，排除網路工具與套件安裝；Orchestrator / Distill 維持 `Bash(git:*)`（4 run 0 拒絕實證夠用）。YAML 註解標明開新案時只換 gate 段。
+  - **T-004 輪當驗證彈**：Executor（20 turns）與 Arbitration（27 turns）各僅 2 次拒絕、自行調整完成，額度正常（$0.35 / $0.93）——收緊可用。若日後某 run 拒絕數飆高，從該 run log 對症補名單。
+  - T-004 一行斷言 merge、`close/T-004` tag、蒸餾完成。仲裁這輪還把報告的 MD058 排版 in-place 修掉（Accepted 小項直接修，不另開票）。
+  - 沙盒最終狀態：`main` + `close/T-001`~`close/T-004` 四個 tag，**所有工單清零**。
+
 **待辦 / 阻塞 ⛔**
-1. **[可選] T-004 追蹤票**：`test_empty_file` 補 stderr 斷言（trivial，一行測試改動）。可當下一次練手，或留著。
-2. **[半完成] 額度數據已從 run log 彙總**（見下方「實測額度數據」，API 等值 USD）。剩下的是訂閱側：在互動 session 看 `/usage`，把「這三輪跑掉的週上限百分比」對照下表換算，外推 Pro 夠不夠。
-3. **[待辦] 收緊 Executor / Arbitration 的 Bash 白名單**：現在兩者全開。三輪已跑順，可從 run log 整理常用指令集合後收緊。
-4. **[待辦] lcp10 的 secret 未設**：目前只設了 test01。要在母版 lcp10 直接跑 workflow 時才需要：`gh secret set CLAUDE_CODE_OAUTH_TOKEN -R fun0963/lcp10_workflow`。
-5. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題。
+1. **[待辦] 訂閱側額度對照**：在互動 session 看 `/usage`，把四輪（≈$8.5 等值）佔週上限的百分比對照 §3.5 換算，外推 Pro 夠不夠。
+2. **[待辦] lcp10 的 secret 未設**：目前只設了 test01。要在母版 lcp10 直接跑 workflow 時才需要：`gh secret set CLAUDE_CODE_OAUTH_TOKEN -R fun0963/lcp10_workflow`。
+3. **[小事] PAT 效期**：fine-grained PAT 有到期日，到期時 git push / gh / API 全會一起失效——症狀是 403，別誤判成 repo 權限問題。
 
 ## 3.5 實測額度數據（2026-07-04~05，test01 三張工單，來源：run log 的 `total_cost_usd`）
 
@@ -97,13 +101,17 @@
 | Arbitration T-002 | opus | 19 | 2.8 分 | $0.77 |
 | Distill T-002 | haiku | 14 | 0.7 分 | $0.08 |
 | Distill T-003 | haiku | 16 | 0.7 分 | $0.08 |
-| **總計（11 runs）** | | | ≈27 分 | **≈$7.15** |
+| Executor T-004（收緊白名單後） | sonnet | 20 | 1.0 分 | $0.35 |
+| Arbitration T-004（收緊白名單後） | opus | 27 | 3.2 分 | $0.93 |
+| Distill T-004 | haiku | 14 | 1.0 分 | $0.09 |
+| **總計（14 runs / 4 張工單）** | | | ≈32 分 | **≈$8.53** |
 
 **結論**：
 - **穩態一輪（Executor+Arbitration+Distill）≈ $1.2–1.3**；開案拆單一次性 $0.88。
 - **仲裁（opus）是成本大頭**，佔穩態一輪的 60%+；Distill（haiku）近乎免費（$0.07–0.08）。
 - **事故很貴**：permission-denial 空轉那次 $2.35，是正常仲裁的 2.5–3 倍——`--max-turns` 護欄擋住了更糟的，但白名單設錯的代價真實存在。
 - 粗估：**每週跑 10 輪工單 ≈ $13 等值 + 開案**；對照 `/usage` 的窗口/週上限百分比即可判斷 Pro 夠不夠。
+- **收緊白名單後（T-004 輪）成本不變**（$1.37/輪，與全開時 $1.2–1.3 同級），每 run 約 2 次拒絕屬可吸收摩擦。
 
 ## 4. 建議的第一次冒煙測試順序（在 test01 上）
 
