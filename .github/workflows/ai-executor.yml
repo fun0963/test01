@@ -67,10 +67,13 @@ jobs:
                Risks / Scope Deviations。
             7. commit 並 git push -u origin ticket/${{ inputs.ticket }}
             8. 最後回報:改了哪些檔、驗證結果、剩餘風險。
+          # 白名單結構 = 通用底座(git + 檔案檢視 coreutils) + 本專案 gate 指令(python3/python/printf)。
+          # 開新專案時把 gate 段換成該專案指令(npm/pytest/...)。排除網路工具(curl/wget)、套件安裝、gh。
+          # 注意:複合指令(a && b)與管線每一段都要各自命中白名單,漏掉常用工具會像 2026-07-04 仲裁那樣爆 turn。
           claude_args: |
             --model sonnet
             --max-turns 50
-            --allowedTools "Read,Glob,Grep,Edit,Write,Bash"
+            --allowedTools "Read,Glob,Grep,Edit,Write,Bash(git:*),Bash(python3:*),Bash(python:*),Bash(printf:*),Bash(echo:*),Bash(cat:*),Bash(ls:*),Bash(head:*),Bash(tail:*),Bash(wc:*),Bash(grep:*),Bash(sed:*),Bash(awk:*),Bash(diff:*),Bash(find:*),Bash(mkdir:*),Bash(rm:*),Bash(cp:*),Bash(mv:*),Bash(mktemp:*),Bash(cd:*)"
 
       - name: 顯示產出的 branch(開 PR 用)
         if: always()
